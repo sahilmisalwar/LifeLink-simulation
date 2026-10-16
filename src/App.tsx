@@ -7,8 +7,41 @@ import {
   RotateCcw,
   Compass,
   Layers,
-  Zap
+  Zap,
+  Gamepad2,
+  Smartphone,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  RotateCw
 } from 'lucide-react';
+
+const _zee = new THREE.Vector3(0, 0, 1);
+const _euler = new THREE.Euler();
+const _q0 = new THREE.Quaternion();
+const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
+const _yawQ = new THREE.Quaternion();
+
+function setDeviceOrientationQuat(
+  quaternion: THREE.Quaternion,
+  alpha: number,
+  beta: number,
+  gamma: number,
+  orient: number,
+  yawOffset: number
+) {
+  _euler.set(beta, alpha, -gamma, 'YXZ');
+  quaternion.setFromEuler(_euler);
+  quaternion.multiply(_q1);
+  quaternion.multiply(_q0.setFromAxisAngle(_zee, -orient));
+
+  if (yawOffset !== 0) {
+    _yawQ.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yawOffset);
+    quaternion.premultiply(_yawQ);
+  }
+}
 
 interface WorkerConfig {
   id: string;
@@ -396,6 +429,129 @@ export default function App() {
   const [activePresetName, setActivePresetName] = useState('overview');
   const [workerLabels, setWorkerLabels] = useState<WorkerLabelItem[]>([]);
   const [isFlyingKeyActive, setIsFlyingKeyActive] = useState(false);
+
+  // Phone View & 360-Degree Panorama / Gyro Mode State
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.innerWidth <= 768 ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    );
+  });
+  const [forceMobileMode, setForceMobileMode] = useState<boolean | null>(null);
+  const effectiveIsMobile = forceMobileMode !== null ? forceMobileMode : isMobile;
+
+  const [gyroEnabled, setGyroEnabled] = useState(false);
+  const [isControllerOpen, setIsControllerOpen] = useState(false);
+  const [isBoostActive, setIsBoostActive] = useState(false);
+  const [isMobileEmergencyOpen, setIsMobileEmergencyOpen] = useState(false);
+  const [headingDegrees, setHeadingDegrees] = useState(0);
+
+  // Virtual navigation state ref for the controller
+  const virtualNavRef = useRef({
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    boost: false
+  });
+
+  const gyroActiveRef = useRef(false);
+  const gyroYawOffsetRef = useRef(0);
+  const isBoostActiveRef = useRef(false);
+  const deviceOrientationRef = useRef<{ alpha: number; beta: number; gamma: number } | null>(null);
+
+  useEffect(() => {
+    gyroActiveRef.current = gyroEnabled;
+  }, [gyroEnabled]);
+
+  useEffect(() => {
+    isBoostActiveRef.current = isBoostActive;
+  }, [isBoostActive]);
+
+  useEffect(() => {
+    const handleCheckMobile = () => {
+      setIsMobile(
+        window.innerWidth <= 768 ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      );
+    };
+    window.addEventListener('resize', handleCheckMobile);
+    return () => window.removeEventListener('resize', handleCheckMobile);
+  }, []);
+
+  const requestGyroPermission = async () => {
+    if (
+      typeof window !== 'undefined' &&
+      typeof (window as any).DeviceOrientationEvent !== 'undefined' &&
+      typeof (window as any).DeviceOrientationEvent.requestPermission === 'function'
+    ) {
+      try {
+        const response = await (window as any).DeviceOrientationEvent.requestPermission();
+        if (response === 'granted') {
+          setGyroEnabled((prev) => !prev);
+        } else {
+          alert('Gyroscope sensor permission was denied on this device.');
+        }
+      } catch (err) {
+        console.warn('Gyro permission error:', err);
+        setGyroEnabled((prev) => !prev);
+      }
+    } else {
+      setGyroEnabled((prev) => !prev);
+    }
+  };
+
+  const handleVirtualNavDown = (action: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down') => {
+    virtualNavRef.current[action] = true;
+    if (stateRef.current.cameraGoal.isTransitioning) {
+      stateRef.current.cameraGoal.isTransitioning = false;
+    }
+    setActivePresetName('mobile-nav');
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(12);
+      } catch {}
+    }
+  };
+
+  const handleVirtualNavUp = (action: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down') => {
+    virtualNavRef.current[action] = false;
+  };
+
+  const handleStopAllNav = () => {
+    virtualNavRef.current.forward = false;
+    virtualNavRef.current.backward = false;
+    virtualNavRef.current.left = false;
+    virtualNavRef.current.right = false;
+    virtualNavRef.current.up = false;
+    virtualNavRef.current.down = false;
+  };
+
+  const handleTurn180 = () => {
+    gyroYawOffsetRef.current += Math.PI;
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(15);
+      } catch {}
+    }
+  };
+
+  const handleRecenter = () => {
+    if (gyroActiveRef.current && deviceOrientationRef.current) {
+      const alphaRad = deviceOrientationRef.current.alpha * (Math.PI / 180);
+      gyroYawOffsetRef.current = -alphaRad;
+    } else {
+      handleSelectCameraPreset('overview');
+    }
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(15);
+      } catch {}
+    }
+  };
 
   // Mutable refs shared with the Three.js animation loop
   const stateRef = useRef<{
@@ -1391,14 +1547,19 @@ export default function App() {
         camera.position.addScaledVector(right, -dx * 0.03);
         camera.position.addScaledVector(up, dy * 0.03);
       } else {
-        // Game-style Free-Look (steer camera yaw and pitch directly)
-        camEuler.y -= dx * 0.0045;
-        camEuler.x = THREE.MathUtils.clamp(
-          camEuler.x - dy * 0.0045,
-          -Math.PI / 2.1,
-          Math.PI / 2.1
-        );
-        camera.quaternion.setFromEuler(camEuler);
+        if (gyroActiveRef.current) {
+          // In Gyro mode, horizontal swipe adjusts forward heading calibration offset
+          gyroYawOffsetRef.current -= dx * 0.005;
+        } else {
+          // 360-Degree Panorama Free-Look (steer camera yaw and pitch directly)
+          camEuler.y -= dx * 0.0045;
+          camEuler.x = THREE.MathUtils.clamp(
+            camEuler.x - dy * 0.0045,
+            -Math.PI / 2.08,
+            Math.PI / 2.08
+          );
+          camera.quaternion.setFromEuler(camEuler);
+        }
       }
 
       const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -1421,6 +1582,41 @@ export default function App() {
 
     const onContextMenu = (e: MouseEvent) => e.preventDefault();
 
+    let initialPinchDist = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDist = Math.hypot(dx, dy);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        const deltaDist = dist - initialPinchDist;
+        initialPinchDist = dist;
+
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        camera.position.addScaledVector(forward, deltaDist * 0.045);
+        camera.position.x = THREE.MathUtils.clamp(camera.position.x, -45, 45);
+        camera.position.y = THREE.MathUtils.clamp(camera.position.y, -20, 36);
+        camera.position.z = THREE.MathUtils.clamp(camera.position.z, 1.2, 62);
+      }
+    };
+
+    const onDeviceOrientation = (e: DeviceOrientationEvent) => {
+      if (e.alpha !== null && e.beta !== null && e.gamma !== null) {
+        deviceOrientationRef.current = {
+          alpha: e.alpha,
+          beta: e.beta,
+          gamma: e.gamma
+        };
+      }
+    };
+
     const domElem = renderer.domElement;
     domElem.addEventListener('pointerdown', onPointerDown);
     domElem.addEventListener('contextmenu', onContextMenu);
@@ -1429,10 +1625,14 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     domElem.addEventListener('wheel', onWheel, { passive: false });
+    domElem.addEventListener('touchstart', onTouchStart, { passive: true });
+    domElem.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('deviceorientation', onDeviceOrientation, true);
 
     const clock = new THREE.Clock();
     let frameId: number;
     let lastLabelSync = 0;
+    let lastHeadingSync = 0;
 
     const isEmergencyLink = (scenario: ScenarioDef | null, from: string, to: string) => {
       if (!scenario) return false;
@@ -1468,6 +1668,30 @@ export default function App() {
       );
       const netAlpha = stateRef.current.networkOpacity;
 
+      // Gyroscope 360-degree orientation tracking
+      if (gyroActiveRef.current && deviceOrientationRef.current) {
+        const { alpha, beta, gamma } = deviceOrientationRef.current;
+        const degToRad = Math.PI / 180;
+        const orient =
+          typeof window.screen?.orientation?.angle === 'number'
+            ? window.screen.orientation.angle * degToRad
+            : typeof (window as any).orientation === 'number'
+            ? (window as any).orientation * degToRad
+            : 0;
+
+        setDeviceOrientationQuat(
+          camera.quaternion,
+          alpha * degToRad,
+          beta * degToRad,
+          gamma * degToRad,
+          orient,
+          gyroYawOffsetRef.current
+        );
+        syncEulerFromCamera();
+        const lookForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        currentTarget.copy(camera.position).addScaledVector(lookForward, 15);
+      }
+
       // Smooth Camera Preset Transitions
       if (cameraGoal.isTransitioning) {
         const step = Math.min(1, delta * 3.2);
@@ -1482,30 +1706,35 @@ export default function App() {
           cameraGoal.isTransitioning = false;
         }
       } else {
-        // Game-style WASD Free-Fly Movement Loop
+        // Game-style & Virtual Controller Free-Fly Movement Loop
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
         const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
 
-        const isSprint = keysPressed['ShiftLeft'] || keysPressed['ShiftRight'];
+        const vNav = virtualNavRef.current;
+        const isSprint =
+          keysPressed['ShiftLeft'] ||
+          keysPressed['ShiftRight'] ||
+          vNav.boost ||
+          isBoostActiveRef.current;
         const flySpeed = (isSprint ? 26.0 : 12.5) * delta;
 
-        if (keysPressed['KeyW'] || keysPressed['ArrowUp']) {
+        if (keysPressed['KeyW'] || keysPressed['ArrowUp'] || vNav.forward) {
           camera.position.addScaledVector(forward, flySpeed);
         }
-        if (keysPressed['KeyS'] || keysPressed['ArrowDown']) {
+        if (keysPressed['KeyS'] || keysPressed['ArrowDown'] || vNav.backward) {
           camera.position.addScaledVector(forward, -flySpeed);
         }
-        if (keysPressed['KeyD'] || keysPressed['ArrowRight']) {
+        if (keysPressed['KeyD'] || keysPressed['ArrowRight'] || vNav.right) {
           camera.position.addScaledVector(right, flySpeed);
         }
-        if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) {
+        if (keysPressed['KeyA'] || keysPressed['ArrowLeft'] || vNav.left) {
           camera.position.addScaledVector(right, -flySpeed);
         }
-        if (keysPressed['KeyE'] || keysPressed['Space']) {
+        if (keysPressed['KeyE'] || keysPressed['Space'] || vNav.up) {
           camera.position.y += flySpeed;
         }
-        if (keysPressed['KeyQ'] || keysPressed['KeyC']) {
+        if (keysPressed['KeyQ'] || keysPressed['KeyC'] || vNav.down) {
           camera.position.y -= flySpeed;
         }
 
@@ -1513,6 +1742,13 @@ export default function App() {
         camera.position.x = THREE.MathUtils.clamp(camera.position.x, -45, 45);
         camera.position.y = THREE.MathUtils.clamp(camera.position.y, -20, 36);
         camera.position.z = THREE.MathUtils.clamp(camera.position.z, 1.2, 62);
+      }
+
+      // Periodic Heading calculation for 360 Panorama indicator (~10fps)
+      if (t - lastHeadingSync > 0.1) {
+        lastHeadingSync = t;
+        const deg = Math.round(((-camEuler.y * 180) / Math.PI) % 360 + 360) % 360;
+        setHeadingDegrees(deg);
       }
 
       // Redraw 3D Surveillance Wall Screen Texture when state changes
@@ -1764,6 +2000,9 @@ export default function App() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       domElem.removeEventListener('wheel', onWheel);
+      domElem.removeEventListener('touchstart', onTouchStart);
+      domElem.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('deviceorientation', onDeviceOrientation, true);
       renderer.dispose();
     };
   }, []);
@@ -1836,227 +2075,606 @@ export default function App() {
         })}
       </div>
 
-      {/* 1. TOP-LEFT: LIFELINK BRAND TITLE */}
-      <div className="pointer-events-none absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-xs">
-        <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
-              <Shield className="w-4 h-4" />
+      {/* ============================================================ */}
+      {/* PHONE VIEW (360-DEGREE PANORAMA / GYRO MODE & POPUP CONTROLLER) */}
+      {/* ============================================================ */}
+      {effectiveIsMobile ? (
+        <>
+          {/* 1. PHONE TOP HUD: BRAND, 360° HEADING, GYRO TOGGLE, LAYER SWITCH */}
+          <div className="pointer-events-none fixed top-3 inset-x-3 z-30 flex items-center justify-between gap-1.5">
+            {/* Brand & Heading Pill */}
+            <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 shadow-xl flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shrink-0">
+                <Shield className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="text-xs font-black text-white">LifeLink</span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold">
+                    360°
+                  </span>
+                </div>
+                <div className="text-[9px] font-mono text-slate-400 leading-tight">
+                  {headingDegrees}° {headingDegrees < 45 || headingDegrees >= 315 ? 'N' : headingDegrees < 135 ? 'E' : headingDegrees < 225 ? 'S' : 'W'}
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold tracking-tight text-white">LifeLink</h1>
-                <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
-                  3D Sim
+
+            {/* Right Group: Gyro Mode Toggle + Layer Switch + Desktop Mode Switch */}
+            <div className="pointer-events-auto flex items-center gap-1.5">
+              {/* Gyro Mode Toggle Button */}
+              <button
+                onClick={requestGyroPermission}
+                title="Toggle 360° Gyroscope Sensor"
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xl backdrop-blur-md border ${
+                  gyroEnabled
+                    ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.5)] animate-pulse'
+                    : 'bg-slate-950/85 hover:bg-slate-900 border-white/15 text-slate-300'
+                }`}
+              >
+                <Smartphone className={`w-3.5 h-3.5 ${gyroEnabled ? 'text-cyan-400' : 'text-slate-400'}`} />
+                <span>{gyroEnabled ? 'Gyro ON' : 'Gyro Mode'}</span>
+              </button>
+
+              {/* Layer 1 / Layer 2 Toggle */}
+              <button
+                onClick={() => setLayer((prev) => (prev === 1 ? 2 : 1))}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border backdrop-blur-md shadow-xl transition-all ${
+                  layer === 1
+                    ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+                    : 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>L{layer}</span>
+              </button>
+
+              {/* Return to Desktop view toggle (for desktop testers) */}
+              <button
+                onClick={() => setForceMobileMode(false)}
+                title="Switch to Desktop Layout"
+                className="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-mono bg-white/10 hover:bg-white/20 border border-white/15 text-slate-300 transition-colors"
+              >
+                <span>💻 Desktop</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Active Emergency Alert Pill on Phone View */}
+          {activeScenario && (
+            <div className="pointer-events-none fixed top-14 inset-x-3 z-30 flex justify-center">
+              <div className="pointer-events-auto bg-red-950/90 backdrop-blur-md border border-red-500 rounded-xl px-3 py-1.5 shadow-2xl flex items-center gap-2 max-w-sm animate-pulse">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <div className="text-[11px] leading-tight text-white font-bold flex-1 truncate">
+                  {activeScenario.sensorCode}: {activeScenario.category}
+                </div>
+                <button
+                  onClick={handleResetSimulation}
+                  className="px-2 py-0.5 rounded bg-red-600/80 text-[10px] font-bold text-white shrink-0 hover:bg-red-500"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Gyro Active Hint Banner */}
+          {gyroEnabled && (
+            <div className="pointer-events-none fixed top-24 inset-x-0 z-20 flex justify-center px-4">
+              <div className="bg-cyan-950/80 border border-cyan-400/40 text-cyan-200 text-[10px] font-mono px-3 py-1 rounded-full shadow-lg backdrop-blur-md animate-fade-in flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping inline-block" />
+                <span>360° Gyro Active: Rotate & tilt phone • Drag to adjust heading</span>
+              </div>
+            </div>
+          )}
+
+          {/* 2. FLOATING POPUP CONTROLLER BUTTON (Normally small icon, pops up on tap) */}
+          {!isControllerOpen ? (
+            <div className="fixed bottom-5 right-5 z-40">
+              <button
+                onClick={() => setIsControllerOpen(true)}
+                aria-label="Open Navigation Controller"
+                className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-cyan-400/70 text-cyan-300 shadow-[0_0_25px_rgba(34,211,238,0.55)] backdrop-blur-xl transition-all duration-300 active:scale-95"
+              >
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-cyan-500 border-2 border-slate-950"></span>
+                </span>
+                <Gamepad2 className="w-7 h-7 text-cyan-300 group-hover:scale-110 transition-transform" />
+                <span className="sr-only">Open Controller</span>
+              </button>
+            </div>
+          ) : (
+            /* POPPED-UP NAVIGATION CONTROLLER */
+            <div className="fixed bottom-4 right-4 z-40 w-[290px] sm:w-[315px] bg-slate-950/95 backdrop-blur-2xl border border-cyan-500/40 rounded-2xl p-3.5 shadow-[0_12px_45px_rgba(0,0,0,0.92)] text-white select-none animate-in fade-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-white/10 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+                    <Gamepad2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-wider text-cyan-300">
+                      Mine Navigator
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-mono">
+                      {gyroEnabled ? '360° Gyro Steering' : '360° Touch Steering'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      const nextBoost = !isBoostActive;
+                      setIsBoostActive(nextBoost);
+                      virtualNavRef.current.boost = nextBoost;
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors ${
+                      isBoostActive
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/40'
+                        : 'bg-white/10 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>{isBoostActive ? '2x' : '1x'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleStopAllNav();
+                      setIsControllerOpen(false);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                    aria-label="Close Controller"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* D-Pad & Elevation Controls */}
+              <div className="flex items-center justify-between gap-2.5 mb-2.5">
+                {/* Tactical D-Pad */}
+                <div className="relative w-36 h-36 bg-slate-900/80 rounded-2xl border border-white/10 p-1 flex items-center justify-center shadow-inner">
+                  {/* Forward */}
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('forward')}
+                    onPointerUp={() => handleVirtualNavUp('forward')}
+                    onPointerLeave={() => handleVirtualNavUp('forward')}
+                    onPointerCancel={() => handleVirtualNavUp('forward')}
+                    className="absolute top-1.5 w-11 h-10 rounded-xl bg-cyan-950/70 active:bg-cyan-500 hover:bg-cyan-900/80 border border-cyan-500/40 flex items-center justify-center text-cyan-300 active:text-slate-950 active:scale-95 transition-all shadow-md"
+                    title="Forward"
+                  >
+                    <ArrowUp className="w-5 h-5" />
+                  </button>
+
+                  {/* Backward */}
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('backward')}
+                    onPointerUp={() => handleVirtualNavUp('backward')}
+                    onPointerLeave={() => handleVirtualNavUp('backward')}
+                    onPointerCancel={() => handleVirtualNavUp('backward')}
+                    className="absolute bottom-1.5 w-11 h-10 rounded-xl bg-cyan-950/70 active:bg-cyan-500 hover:bg-cyan-900/80 border border-cyan-500/40 flex items-center justify-center text-cyan-300 active:text-slate-950 active:scale-95 transition-all shadow-md"
+                    title="Backward"
+                  >
+                    <ArrowDown className="w-5 h-5" />
+                  </button>
+
+                  {/* Left Strafe */}
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('left')}
+                    onPointerUp={() => handleVirtualNavUp('left')}
+                    onPointerLeave={() => handleVirtualNavUp('left')}
+                    onPointerCancel={() => handleVirtualNavUp('left')}
+                    className="absolute left-1.5 w-10 h-11 rounded-xl bg-cyan-950/70 active:bg-cyan-500 hover:bg-cyan-900/80 border border-cyan-500/40 flex items-center justify-center text-cyan-300 active:text-slate-950 active:scale-95 transition-all shadow-md"
+                    title="Strafe Left"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+
+                  {/* Right Strafe */}
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('right')}
+                    onPointerUp={() => handleVirtualNavUp('right')}
+                    onPointerLeave={() => handleVirtualNavUp('right')}
+                    onPointerCancel={() => handleVirtualNavUp('right')}
+                    className="absolute right-1.5 w-10 h-11 rounded-xl bg-cyan-950/70 active:bg-cyan-500 hover:bg-cyan-900/80 border border-cyan-500/40 flex items-center justify-center text-cyan-300 active:text-slate-950 active:scale-95 transition-all shadow-md"
+                    title="Strafe Right"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+
+                  {/* Center: 180 Turn */}
+                  <button
+                    onClick={handleTurn180}
+                    title="Turn 180°"
+                    className="w-10 h-10 rounded-full bg-slate-800 active:bg-cyan-400 border border-white/20 flex items-center justify-center text-slate-300 active:text-slate-950 text-[10px] font-bold shadow-sm"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Elevation & Recenter */}
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('up')}
+                    onPointerUp={() => handleVirtualNavUp('up')}
+                    onPointerLeave={() => handleVirtualNavUp('up')}
+                    onPointerCancel={() => handleVirtualNavUp('up')}
+                    className="w-full py-2.5 rounded-xl bg-amber-950/60 active:bg-amber-400 hover:bg-amber-900/70 border border-amber-500/40 flex items-center justify-center gap-1 text-amber-300 active:text-slate-950 text-xs font-bold transition-all shadow-md"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                    <span>Ascend</span>
+                  </button>
+
+                  <button
+                    onPointerDown={() => handleVirtualNavDown('down')}
+                    onPointerUp={() => handleVirtualNavUp('down')}
+                    onPointerLeave={() => handleVirtualNavUp('down')}
+                    onPointerCancel={() => handleVirtualNavUp('down')}
+                    className="w-full py-2.5 rounded-xl bg-amber-950/60 active:bg-amber-400 hover:bg-amber-900/70 border border-amber-500/40 flex items-center justify-center gap-1 text-amber-300 active:text-slate-950 text-xs font-bold transition-all shadow-md"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                    <span>Descend</span>
+                  </button>
+
+                  <button
+                    onClick={handleRecenter}
+                    className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/15 active:bg-cyan-400 active:text-slate-950 border border-white/15 text-slate-200 text-[11px] font-medium flex items-center justify-center gap-1 transition-all"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Recenter</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Fast Teleport Jumps */}
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-1 text-[10px]">
+                <span className="text-slate-400 font-mono text-[9px] uppercase">Jump:</span>
+                <button
+                  onClick={() => handleSelectCameraPreset('overview')}
+                  className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 text-slate-200 font-semibold"
+                >
+                  Main
+                </button>
+                <button
+                  onClick={() => handleSelectCameraPreset('surface')}
+                  className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 text-slate-200 font-semibold"
+                >
+                  Surface
+                </button>
+                <button
+                  onClick={() => moveCameraTo([0, 4.5, 12], [0, 4.0, 0], 'l1')}
+                  className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 text-amber-400 font-semibold"
+                >
+                  L1
+                </button>
+                <button
+                  onClick={() => moveCameraTo([0, -2.5, 12], [0, -3.0, 0], 'l2')}
+                  className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 text-amber-400 font-semibold"
+                >
+                  L2
+                </button>
+                <button
+                  onClick={() => moveCameraTo([0, -9.5, 12], [0, -10.0, 0], 'l3')}
+                  className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 text-amber-400 font-semibold"
+                >
+                  L3
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 3. FLOATING EMERGENCY SIMULATOR TRIGGER FOR PHONE (Bottom-Left) */}
+          {!isMobileEmergencyOpen ? (
+            <div className="fixed bottom-5 left-5 z-40">
+              <button
+                onClick={() => setIsMobileEmergencyOpen(true)}
+                aria-label="Simulate Emergency"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-red-500/70 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.5)] backdrop-blur-xl transition-all active:scale-95"
+              >
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+              </button>
+            </div>
+          ) : (
+            /* POPPED-UP EMERGENCY MENU */
+            <div className="fixed bottom-4 left-4 z-40 w-64 bg-slate-950/95 backdrop-blur-2xl border border-red-500/50 rounded-2xl p-3 shadow-[0_12px_40px_rgba(0,0,0,0.92)] text-white select-none animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-300">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Simulate Alert</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileEmergencyOpen(false)}
+                  className="p-1 rounded-md bg-white/10 text-slate-300 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                {[
+                  { key: 'fall', label: 'MPU6050 Motion / Fall', code: 'W-101', color: 'text-red-400' },
+                  { key: 'biometric', label: 'MAX30102 Heart / SpO₂', code: 'W-105', color: 'text-rose-400' },
+                  { key: 'temperature', label: 'DS18B20 Temperature', code: 'W-102', color: 'text-amber-400' },
+                  { key: 'gas', label: 'MQ-135 Gas / Air-Quality', code: 'W-106', color: 'text-orange-400' }
+                ].map((scen) => (
+                  <button
+                    key={scen.key}
+                    onClick={() => {
+                      handleTriggerScenario(scen.key);
+                      setIsMobileEmergencyOpen(false);
+                    }}
+                    className={`flex items-center justify-between p-2 rounded-xl border text-left transition-all ${
+                      activeScenarioKey === scen.key
+                        ? 'bg-red-950 border-red-500 text-white font-bold'
+                        : 'bg-slate-900/80 hover:bg-slate-800 border-white/10 text-slate-200'
+                    }`}
+                  >
+                    <div className="text-[11px] leading-tight font-medium">
+                      <div className={`font-mono text-[9px] ${scen.color}`}>{scen.code}</div>
+                      <div>{scen.label}</div>
+                    </div>
+                  </button>
+                ))}
+
+                {activeScenario && (
+                  <button
+                    onClick={() => {
+                      handleResetSimulation();
+                      setIsMobileEmergencyOpen(false);
+                    }}
+                    className="mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-red-600/30 hover:bg-red-600/40 border border-red-500/50 text-red-200 text-xs font-bold"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset Simulation</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        /* ============================================================ */
+        /* DESKTOP VIEW (FULL SCREEN CONTROL ROOM DASHBOARD)            */
+        /* ============================================================ */
+        <>
+          {/* 1. TOP-LEFT: LIFELINK BRAND TITLE & PHONE MODE TEST TOGGLE */}
+          <div className="pointer-events-none absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-xs">
+            <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-base font-extrabold tracking-tight text-white">LifeLink</h1>
+                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
+                      3D Sim
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    Underground Mine Safety & Mesh Network
+                  </p>
+                </div>
+              </div>
+
+              {/* Phone View Mode Preview Button */}
+              <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
+                <button
+                  onClick={() => setForceMobileMode(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-[10px] font-bold uppercase transition-colors"
+                >
+                  <Smartphone className="w-3 h-3" />
+                  <span>Test Phone 360 / Gyro</span>
+                </button>
+                <span className="text-[9px] font-mono text-slate-400">or resize window</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. TOP-CENTER: PROMINENT TWO-LAYER VISUALIZATION SWITCH */}
+          <div className="pointer-events-none absolute top-4 inset-x-0 z-20 flex justify-center px-4">
+            <div className="pointer-events-auto bg-slate-950/80 backdrop-blur-md border border-white/15 p-1 rounded-xl shadow-2xl flex items-center gap-1">
+              <button
+                onClick={() => setLayer(1)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  layer === 1
+                    ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Layer 1 — Mine View</span>
+              </button>
+
+              <button
+                onClick={() => setLayer(2)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  layer === 2
+                    ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/25 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>Layer 2 — Signal Network</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3. TOP-RIGHT: ACTIVE EMERGENCY BANNER & RESET CAMERA */}
+          <div className="pointer-events-none absolute top-4 right-4 z-20 flex items-center gap-2">
+            {activeScenario && (
+              <div className="pointer-events-auto bg-red-950/85 backdrop-blur-md border border-red-500/60 rounded-xl px-3.5 py-2 shadow-2xl flex items-center gap-3 animate-pulse">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <div className="text-xs">
+                  <div className="font-bold text-white leading-tight">
+                    {activeScenario.sensorCode}: {activeScenario.category}
+                  </div>
+                  <div className="text-[10px] font-mono text-red-200">
+                    Worker {activeScenario.targetWorkerId} →{' '}
+                    {alertStage >= 2
+                      ? 'Surveillance Room Alert Active'
+                      : 'Mesh Uplinking to Surface...'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => handleSelectCameraPreset('overview')}
+              title="Reset Camera to Default Cross-Section"
+              className="pointer-events-auto bg-slate-950/75 hover:bg-slate-900 backdrop-blur-md border border-white/15 text-slate-200 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-xl transition-colors"
+            >
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Reset Camera</span>
+            </button>
+          </div>
+
+          {/* 4. BOTTOM-LEFT: QUICK CAMERA VIEWS & COMPACT LEGEND */}
+          <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-col gap-2 max-w-sm">
+            <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl p-1.5 flex items-center gap-1 shadow-xl">
+              {[
+                { key: 'overview', label: 'Cross-Section' },
+                { key: 'surface', label: 'Surveillance Room' },
+                { key: 'underground', label: 'Deep Tunnels' }
+              ].map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => handleSelectCameraPreset(v.key)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    activePresetName === v.key
+                      ? 'bg-white/15 text-white font-semibold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl px-3.5 py-2.5 shadow-xl">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
+                  <span>Smart Helmet Node</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block shadow-[0_0_6px_#22d3ee]" />
+                  <span>Mesh Signal & Uplink</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block animate-pulse" />
+                  <span>Emergency Alert Flow</span>
+                </div>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-300">
+                <span
+                  className={`px-1.5 py-0.5 rounded font-mono font-bold border ${
+                    isFlyingKeyActive
+                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200'
+                      : 'bg-white/10 border-white/15 text-amber-300'
+                  }`}
+                >
+                  WASD + Space/Q
+                </span>
+                <span>
+                  Fly across environment • Hold <b>Shift</b> to boost • Drag mouse to steer
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-tight">
-                Underground Mine Safety & Mesh Network
-              </p>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* 2. TOP-CENTER: PROMINENT TWO-LAYER VISUALIZATION SWITCH */}
-      <div className="pointer-events-none absolute top-4 inset-x-0 z-20 flex justify-center px-4">
-        <div className="pointer-events-auto bg-slate-950/80 backdrop-blur-md border border-white/15 p-1 rounded-xl shadow-2xl flex items-center gap-1">
-          <button
-            onClick={() => setLayer(1)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-              layer === 1
-                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 font-bold'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Layer 1 — Mine View</span>
-          </button>
+          {/* 5. BOTTOM-RIGHT: COMPACT "SIMULATE EMERGENCY" FOUR SENSOR SCENARIOS */}
+          <div className="pointer-events-none absolute bottom-4 right-4 z-20 w-80 sm:w-96">
+            <div className="pointer-events-auto bg-slate-950/80 backdrop-blur-md border border-white/15 rounded-xl p-3.5 shadow-2xl">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-white">
+                    Simulate Emergency
+                  </span>
+                </div>
 
-          <button
-            onClick={() => setLayer(2)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-              layer === 2
-                ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/25 font-bold'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>Layer 2 — Signal Network</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. TOP-RIGHT: ACTIVE EMERGENCY BANNER & RESET CAMERA */}
-      <div className="pointer-events-none absolute top-4 right-4 z-20 flex items-center gap-2">
-        {activeScenario && (
-          <div className="pointer-events-auto bg-red-950/85 backdrop-blur-md border border-red-500/60 rounded-xl px-3.5 py-2 shadow-2xl flex items-center gap-3 animate-pulse">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-            <div className="text-xs">
-              <div className="font-bold text-white leading-tight">
-                {activeScenario.sensorCode}: {activeScenario.category}
+                {activeScenario ? (
+                  <button
+                    onClick={handleResetSimulation}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-200 text-[11px] font-semibold transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset State</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono text-slate-400">Select Sensor Condition</span>
+                )}
               </div>
-              <div className="text-[10px] font-mono text-red-200">
-                Worker {activeScenario.targetWorkerId} →{' '}
-                {alertStage >= 2
-                  ? 'Surveillance Room Alert Active'
-                  : 'Mesh Uplinking to Surface...'}
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => handleTriggerScenario('fall')}
+                  className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                    activeScenarioKey === 'fall'
+                      ? 'bg-red-950/90 border-red-500 text-white shadow-lg shadow-red-950/50'
+                      : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[10px] font-mono font-bold text-red-400">MPU6050</span>
+                    <span className="text-[9px] font-mono text-slate-400">W-101</span>
+                  </div>
+                  <span className="text-xs font-semibold mt-0.5">Motion / Fall</span>
+                </button>
+
+                <button
+                  onClick={() => handleTriggerScenario('biometric')}
+                  className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                    activeScenarioKey === 'biometric'
+                      ? 'bg-red-950/90 border-red-500 text-white shadow-lg shadow-red-950/50'
+                      : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[10px] font-mono font-bold text-rose-400">MAX30102</span>
+                    <span className="text-[9px] font-mono text-slate-400">W-105</span>
+                  </div>
+                  <span className="text-xs font-semibold mt-0.5">Heart Rate / SpO₂</span>
+                </button>
+
+                <button
+                  onClick={() => handleTriggerScenario('temperature')}
+                  className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                    activeScenarioKey === 'temperature'
+                      ? 'bg-amber-950/90 border-amber-500 text-white shadow-lg shadow-amber-950/50'
+                      : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[10px] font-mono font-bold text-amber-400">DS18B20</span>
+                    <span className="text-[9px] font-mono text-slate-400">W-102</span>
+                  </div>
+                  <span className="text-xs font-semibold mt-0.5">Temperature</span>
+                </button>
+
+                <button
+                  onClick={() => handleTriggerScenario('gas')}
+                  className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
+                    activeScenarioKey === 'gas'
+                      ? 'bg-amber-950/90 border-amber-500 text-white shadow-lg shadow-amber-950/50'
+                      : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[10px] font-mono font-bold text-orange-400">MQ-135</span>
+                    <span className="text-[9px] font-mono text-slate-400">W-106</span>
+                  </div>
+                  <span className="text-xs font-semibold mt-0.5">Air-Quality / Gas</span>
+                </button>
               </div>
             </div>
           </div>
-        )}
-
-        <button
-          onClick={() => handleSelectCameraPreset('overview')}
-          title="Reset Camera to Default Cross-Section"
-          className="pointer-events-auto bg-slate-950/75 hover:bg-slate-900 backdrop-blur-md border border-white/15 text-slate-200 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-xl transition-colors"
-        >
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="hidden sm:inline">Reset Camera</span>
-        </button>
-      </div>
-
-      {/* 4. BOTTOM-LEFT: QUICK CAMERA VIEWS & COMPACT LEGEND */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-col gap-2 max-w-sm">
-        <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl p-1.5 flex items-center gap-1 shadow-xl">
-          {[
-            { key: 'overview', label: 'Cross-Section' },
-            { key: 'surface', label: 'Surveillance Room' },
-            { key: 'underground', label: 'Deep Tunnels' }
-          ].map((v) => (
-            <button
-              key={v.key}
-              onClick={() => handleSelectCameraPreset(v.key)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
-                activePresetName === v.key
-                  ? 'bg-white/15 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              }`}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="pointer-events-auto bg-slate-950/75 backdrop-blur-md border border-white/10 rounded-xl px-3.5 py-2.5 shadow-xl">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-300">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
-              <span>Smart Helmet Node</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block shadow-[0_0_6px_#22d3ee]" />
-              <span>Mesh Signal & Uplink</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block animate-pulse" />
-              <span>Emergency Alert Flow</span>
-            </div>
-          </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-300">
-            <span
-              className={`px-1.5 py-0.5 rounded font-mono font-bold border ${
-                isFlyingKeyActive
-                  ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200'
-                  : 'bg-white/10 border-white/15 text-amber-300'
-              }`}
-            >
-              WASD + Space/Q
-            </span>
-            <span>
-              Fly across environment • Hold <b>Shift</b> to boost • Drag mouse to steer
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. BOTTOM-RIGHT: COMPACT "SIMULATE EMERGENCY" FOUR SENSOR SCENARIOS */}
-      <div className="pointer-events-none absolute bottom-4 right-4 z-20 w-80 sm:w-96">
-        <div className="pointer-events-auto bg-slate-950/80 backdrop-blur-md border border-white/15 rounded-xl p-3.5 shadow-2xl">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-white">
-                Simulate Emergency
-              </span>
-            </div>
-
-            {activeScenario ? (
-              <button
-                onClick={handleResetSimulation}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-200 text-[11px] font-semibold transition-colors"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset State</span>
-              </button>
-            ) : (
-              <span className="text-[10px] font-mono text-slate-400">Select Sensor Condition</span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => handleTriggerScenario('fall')}
-              className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
-                activeScenarioKey === 'fall'
-                  ? 'bg-red-950/90 border-red-500 text-white shadow-lg shadow-red-950/50'
-                  : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-mono font-bold text-red-400">MPU6050</span>
-                <span className="text-[9px] font-mono text-slate-400">W-101</span>
-              </div>
-              <span className="text-xs font-semibold mt-0.5">Motion / Fall</span>
-            </button>
-
-            <button
-              onClick={() => handleTriggerScenario('biometric')}
-              className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
-                activeScenarioKey === 'biometric'
-                  ? 'bg-red-950/90 border-red-500 text-white shadow-lg shadow-red-950/50'
-                  : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-mono font-bold text-rose-400">MAX30102</span>
-                <span className="text-[9px] font-mono text-slate-400">W-105</span>
-              </div>
-              <span className="text-xs font-semibold mt-0.5">Heart Rate / SpO₂</span>
-            </button>
-
-            <button
-              onClick={() => handleTriggerScenario('temperature')}
-              className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
-                activeScenarioKey === 'temperature'
-                  ? 'bg-amber-950/90 border-amber-500 text-white shadow-lg shadow-amber-950/50'
-                  : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-mono font-bold text-amber-400">DS18B20</span>
-                <span className="text-[9px] font-mono text-slate-400">W-102</span>
-              </div>
-              <span className="text-xs font-semibold mt-0.5">Temperature</span>
-            </button>
-
-            <button
-              onClick={() => handleTriggerScenario('gas')}
-              className={`flex flex-col items-start p-2 rounded-lg border text-left transition-all ${
-                activeScenarioKey === 'gas'
-                  ? 'bg-amber-950/90 border-amber-500 text-white shadow-lg shadow-amber-950/50'
-                  : 'bg-slate-900/70 hover:bg-slate-800/80 border-white/10 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-mono font-bold text-orange-400">MQ-135</span>
-                <span className="text-[9px] font-mono text-slate-400">W-106</span>
-              </div>
-              <span className="text-xs font-semibold mt-0.5">Air-Quality / Gas</span>
-            </button>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
