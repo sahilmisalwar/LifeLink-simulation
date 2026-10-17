@@ -925,6 +925,10 @@ export default function App() {
   const gyroYawOffsetRef = useRef(0);
   const isBoostActiveRef = useRef(false);
   const deviceOrientationRef = useRef<{ alpha: number; beta: number; gamma: number } | null>(null);
+  // Smoothed (low-pass filtered) sensor angles to eliminate high-frequency jitter
+  const smoothedOrientRef = useRef<{ alpha: number; beta: number; gamma: number } | null>(null);
+  // Target quaternion computed from smoothed sensor data; camera slerps toward it
+  const gyroTargetQuatRef = useRef(new THREE.Quaternion());
 
   useEffect(() => {
     gyroActiveRef.current = gyroEnabled;
@@ -2613,6 +2617,23 @@ export default function App() {
           beta: e.beta,
           gamma: e.gamma
         };
+
+        // Low-pass filter: exponentially smooth the raw sensor angles
+        // A smaller factor = heavier smoothing (less jitter but more lag)
+        const LPF = 0.25;
+        const prev = smoothedOrientRef.current;
+        if (!prev) {
+          // First reading – seed with raw values
+          smoothedOrientRef.current = { alpha: e.alpha, beta: e.beta, gamma: e.gamma };
+        } else {
+          // Handle alpha wrap-around at 0°/360° boundary
+          let dAlpha = e.alpha - prev.alpha;
+          if (dAlpha > 180) dAlpha -= 360;
+          if (dAlpha < -180) dAlpha += 360;
+          prev.alpha = (prev.alpha + dAlpha * LPF + 360) % 360;
+          prev.beta  = prev.beta  + (e.beta  - prev.beta)  * LPF;
+          prev.gamma = prev.gamma + (e.gamma - prev.gamma) * LPF;
+        }
       }
     };
 
@@ -2667,9 +2688,9 @@ export default function App() {
       );
       const netAlpha = stateRef.current.networkOpacity;
 
-      // Gyroscope 360-degree orientation tracking
-      if (gyroActiveRef.current && deviceOrientationRef.current) {
-        const { alpha, beta, gamma } = deviceOrientationRef.current;
+      // Gyroscope 360-degree orientation tracking (smoothed)
+      if (gyroActiveRef.current && smoothedOrientRef.current) {
+        const { alpha, beta, gamma } = smoothedOrientRef.current;
         const degToRad = Math.PI / 180;
         const orient =
           typeof window.screen?.orientation?.angle === 'number'
@@ -2678,14 +2699,21 @@ export default function App() {
             ? (window as unknown as { orientation: number }).orientation * degToRad
             : 0;
 
+        // Compute the target quaternion from the smoothed sensor data
         setDeviceOrientationQuat(
-          camera.quaternion,
+          gyroTargetQuatRef.current,
           alpha * degToRad,
           beta * degToRad,
           gamma * degToRad,
           orient,
           gyroYawOffsetRef.current
         );
+
+        // Slerp the camera toward the target for buttery-smooth motion
+        // Higher factor = more responsive; lower = smoother but laggier
+        const slerpFactor = Math.min(1.0, delta * 12.0);
+        camera.quaternion.slerp(gyroTargetQuatRef.current, slerpFactor);
+
         syncEulerFromCamera();
         const lookForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
         currentTarget.copy(camera.position).addScaledVector(lookForward, 15);
