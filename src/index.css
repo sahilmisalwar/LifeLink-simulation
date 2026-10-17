@@ -49,424 +49,328 @@ canvas:active {
 }
 
 /* ============================================================
-   LIQUID GLASS DESIGN SYSTEM
+   LIQUID GLASS DESIGN SYSTEM (SVG Filter Displacement Engine)
    ============================================================
-   Inspired by Apple visionOS / iOS 26 liquid glass aesthetics.
-   Frosted translucency, soft refraction borders, inner glow
-   highlights, and fluid visual depth.
+   Powered by #container-glass and #btn-glass SVG displacement
+   filters, inner refraction glows, and fluid chromatic depth.
    ============================================================ */
 
-/* --- Glass Panel: Cards, Containers, Menus --- */
+/* --- Base Container: Panels, Cards, Dialogs --- */
+.glassContainer,
 .glass-panel {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.03) 50%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
-}
-
-/* --- Glass Button: Interactive clickable elements --- */
-.glass-btn {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-btn:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.07) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-  transform: translateY(-0.5px);
-}
-
-.glass-btn:active {
-  transform: translateY(0.5px) scale(0.98);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-/* --- Accent Glass: Cyan-tinted for primary actions --- */
-.glass-cyan {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.12) 0%,
-    rgba(14, 165, 233, 0.06) 50%,
-    rgba(34, 211, 238, 0.1) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.25);
-  box-shadow:
-    0 4px 20px rgba(34, 211, 238, 0.12),
-    inset 0 1px 0 rgba(34, 211, 238, 0.2),
-    inset 0 -1px 0 rgba(34, 211, 238, 0.05);
-}
-
-.glass-cyan:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.18) 0%,
-    rgba(14, 165, 233, 0.1) 50%,
-    rgba(34, 211, 238, 0.15) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.35);
-  box-shadow:
-    0 6px 28px rgba(34, 211, 238, 0.18),
-    inset 0 1px 0 rgba(34, 211, 238, 0.25),
-    inset 0 -1px 0 rgba(34, 211, 238, 0.08);
-}
-
-/* --- Amber Glass: Warning / secondary actions --- */
-.glass-amber {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.12) 0%,
-    rgba(217, 119, 6, 0.06) 50%,
-    rgba(245, 158, 11, 0.1) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.25);
-  box-shadow:
-    0 4px 20px rgba(245, 158, 11, 0.1),
-    inset 0 1px 0 rgba(245, 158, 11, 0.18),
-    inset 0 -1px 0 rgba(245, 158, 11, 0.04);
-}
-
-.glass-amber:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.18) 0%,
-    rgba(217, 119, 6, 0.1) 50%,
-    rgba(245, 158, 11, 0.15) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-/* --- Red Glass: Emergency / critical alerts --- */
-.glass-red {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.12) 0%,
-    rgba(185, 28, 28, 0.06) 50%,
-    rgba(239, 68, 68, 0.1) 100%
-  );
-  border-color: rgba(239, 68, 68, 0.3);
-  box-shadow:
-    0 4px 20px rgba(239, 68, 68, 0.12),
-    inset 0 1px 0 rgba(239, 68, 68, 0.18),
-    inset 0 -1px 0 rgba(239, 68, 68, 0.04);
-}
-
-.glass-red:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.18) 0%,
-    rgba(185, 28, 28, 0.1) 50%,
-    rgba(239, 68, 68, 0.15) 100%
-  );
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-/* --- Active/Selected glass states --- */
-.glass-active-cyan {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.22) 0%,
-    rgba(14, 165, 233, 0.12) 50%,
-    rgba(34, 211, 238, 0.18) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.5);
-  box-shadow:
-    0 0 20px rgba(34, 211, 238, 0.2),
-    0 4px 20px rgba(34, 211, 238, 0.12),
-    inset 0 1px 0 rgba(34, 211, 238, 0.3),
-    inset 0 -1px 0 rgba(34, 211, 238, 0.08);
-}
-
-.glass-active-amber {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.25) 0%,
-    rgba(217, 119, 6, 0.15) 50%,
-    rgba(245, 158, 11, 0.2) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow:
-    0 0 18px rgba(245, 158, 11, 0.15),
-    0 4px 16px rgba(245, 158, 11, 0.1),
-    inset 0 1px 0 rgba(245, 158, 11, 0.3);
-}
-
-.glass-active-red {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.25) 0%,
-    rgba(185, 28, 28, 0.14) 50%,
-    rgba(239, 68, 68, 0.2) 100%
-  );
-  border-color: rgba(239, 68, 68, 0.55);
-  box-shadow:
-    0 0 20px rgba(239, 68, 68, 0.18),
-    0 4px 20px rgba(239, 68, 68, 0.12),
-    inset 0 1px 0 rgba(239, 68, 68, 0.3);
-}
-
-/* --- Floating FAB (Floating Action Button) --- */
-.glass-fab {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  backdrop-filter: blur(28px) saturate(1.8);
-  -webkit-backdrop-filter: blur(28px) saturate(1.8);
-  border: 2px solid rgba(34, 211, 238, 0.35);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(34, 211, 238, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  border-radius: 24px;
+  background: rgba(10, 14, 26, 0.4);
+  isolation: isolate;
+  z-index: 0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-fab:hover {
-  border-color: rgba(34, 211, 238, 0.55);
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.55),
-    0 0 30px rgba(34, 211, 238, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
-  transform: translateY(-1px);
+.glassContainer::before,
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  -webkit-box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+          box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
 }
 
-.glass-fab:active {
-  transform: scale(0.95);
+.glassContainer::after,
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  -webkit-backdrop-filter: blur(0px);
+          backdrop-filter: blur(0px);
+  -webkit-filter: url(#container-glass);
+          filter: url(#container-glass);
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
 }
 
-.glass-fab-red {
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 18px rgba(239, 68, 68, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+.glassContainer > *,
+.glass-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
-.glass-fab-red:hover {
-  border-color: rgba(239, 68, 68, 0.6);
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.55),
-    0 0 28px rgba(239, 68, 68, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+/* --- Base Button: All Interactive Clickable Elements --- */
+.glassBtn,
+.glass-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 9999px;
+  outline: none;
+  border: none;
+  z-index: 0;
+  isolation: isolate;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- D-Pad / Controller buttons inside glass panels --- */
-.glass-dpad {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.08) 0%,
-    rgba(14, 165, 233, 0.04) 100%
-  );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(34, 211, 238, 0.15);
-  transition: all 0.15s ease;
-}
-
-.glass-dpad:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.14) 0%,
-    rgba(14, 165, 233, 0.08) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.35);
-}
-
-.glass-dpad:active {
-  background: rgba(34, 211, 238, 0.45);
-  color: #020617;
-  border-color: rgba(34, 211, 238, 0.7);
-  transform: scale(0.95);
-  box-shadow:
-    0 0 12px rgba(34, 211, 238, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.glass-dpad-amber {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.08) 0%,
-    rgba(217, 119, 6, 0.04) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.2);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(245, 158, 11, 0.15);
-}
-
-.glass-dpad-amber:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.14) 0%,
-    rgba(217, 119, 6, 0.08) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-.glass-dpad-amber:active {
-  background: rgba(245, 158, 11, 0.5);
-  color: #020617;
-  border-color: rgba(245, 158, 11, 0.7);
-  transform: scale(0.95);
-}
-
-/* --- Worker label pills floating over 3D scene --- */
-.glass-pill {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.03) 100%
-  );
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+.glassBtn::before,
+.glass-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  -webkit-box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+          box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.1);
+  pointer-events: none;
   transition: all 0.2s ease;
 }
 
-.glass-pill:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.2);
+.glassBtn::after,
+.glass-btn::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  -webkit-backdrop-filter: blur(0px);
+          backdrop-filter: blur(0px);
+  -webkit-filter: url(#btn-glass);
+          filter: url(#btn-glass);
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
 }
 
-.glass-pill-alert {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.12) 0%,
-    rgba(185, 28, 28, 0.06) 100%
-  );
-  border-color: rgba(239, 68, 68, 0.4);
+.glassBtn > *,
+.glass-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glassBtn:hover,
+.glass-btn:hover {
+  transform: translateY(-0.5px);
+}
+
+.glassBtn:hover::before,
+.glass-btn:hover::before {
+  background-color: rgba(255, 255, 255, 0.18);
+  -webkit-box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.9), inset 0 0 5px 1.5px rgba(255, 255, 255, 0.85);
+          box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.9), inset 0 0 5px 1.5px rgba(255, 255, 255, 0.85);
+}
+
+.glassBtn:active,
+.glass-btn:active {
+  transform: translateY(0.5px) scale(0.97);
+}
+
+.glassBtn:active::before,
+.glass-btn:active::before {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Color Tints & Semantic Accents --- */
+.glass-cyan,
+.glassBtn-cyan {
+  color: #67e8f9;
+}
+.glass-cyan::before,
+.glassBtn-cyan::before {
+  background-color: rgba(34, 211, 238, 0.15);
+  box-shadow: inset 2px 2px 0px -2px rgba(34, 211, 238, 0.9), inset 0 0 4px 1px rgba(34, 211, 238, 0.7);
+}
+.glass-cyan:hover::before,
+.glassBtn-cyan:hover::before {
+  background-color: rgba(34, 211, 238, 0.25);
+  box-shadow: inset 2px 2px 0px -2px rgba(34, 211, 238, 1), inset 0 0 6px 2px rgba(34, 211, 238, 0.85);
+}
+
+.glass-amber,
+.glassBtn-amber {
+  color: #fcd34d;
+}
+.glass-amber::before,
+.glassBtn-amber::before {
+  background-color: rgba(245, 158, 11, 0.15);
+  box-shadow: inset 2px 2px 0px -2px rgba(245, 158, 11, 0.9), inset 0 0 4px 1px rgba(245, 158, 11, 0.7);
+}
+.glass-amber:hover::before,
+.glassBtn-amber:hover::before {
+  background-color: rgba(245, 158, 11, 0.25);
+}
+
+.glass-red,
+.glassBtn-red {
+  color: #fca5a5;
+}
+.glass-red::before,
+.glassBtn-red::before {
+  background-color: rgba(239, 68, 68, 0.18);
+  box-shadow: inset 2px 2px 0px -2px rgba(239, 68, 68, 0.9), inset 0 0 4px 1px rgba(239, 68, 68, 0.7);
+}
+.glass-red:hover::before,
+.glassBtn-red:hover::before {
+  background-color: rgba(239, 68, 68, 0.28);
+}
+
+/* --- Active / Selected States --- */
+.glass-active-cyan,
+.glassBtn-active-cyan {
+  color: #22d3ee;
+}
+.glass-active-cyan::before,
+.glassBtn-active-cyan::before {
+  background-color: rgba(34, 211, 238, 0.3);
   box-shadow:
-    0 4px 16px rgba(239, 68, 68, 0.15),
-    inset 0 1px 0 rgba(239, 68, 68, 0.15);
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 0.95),
+    inset 0 0 6px 2px rgba(34, 211, 238, 0.9),
+    0 0 16px rgba(34, 211, 238, 0.3);
 }
 
-/* --- Scenario option rows inside menus --- */
-.glass-option {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: all 0.2s ease;
+.glass-active-amber,
+.glassBtn-active-amber {
+  color: #fbbf24;
 }
-
-.glass-option:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.glass-option-selected {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.12) 0%,
-    rgba(14, 165, 233, 0.06) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.4);
+.glass-active-amber::before,
+.glassBtn-active-amber::before {
+  background-color: rgba(245, 158, 11, 0.3);
   box-shadow:
-    0 0 14px rgba(34, 211, 238, 0.12),
-    inset 0 1px 0 rgba(34, 211, 238, 0.15);
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 0.95),
+    inset 0 0 6px 2px rgba(245, 158, 11, 0.9),
+    0 0 16px rgba(245, 158, 11, 0.3);
 }
 
-/* --- Tiny inline badge/chip elements --- */
-.glass-chip {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.03) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+.glass-active-red,
+.glassBtn-active-red {
+  color: #f87171;
 }
-
-/* --- Jump teleport buttons in controller --- */
-.glass-jump {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: all 0.15s ease;
-}
-
-.glass-jump:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.glass-jump-active {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.18) 0%,
-    rgba(14, 165, 233, 0.08) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.4);
+.glass-active-red::before,
+.glassBtn-active-red::before {
+  background-color: rgba(239, 68, 68, 0.32);
   box-shadow:
-    0 0 10px rgba(34, 211, 238, 0.12),
-    inset 0 1px 0 rgba(34, 211, 238, 0.2);
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 0.95),
+    inset 0 0 6px 2px rgba(239, 68, 68, 0.9),
+    0 0 16px rgba(239, 68, 68, 0.35);
 }
 
-.glass-jump-amber-active {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.18) 0%,
-    rgba(217, 119, 6, 0.08) 100%
-  );
-  border-color: rgba(245, 158, 11, 0.4);
+/* --- Floating Action Button (FAB) --- */
+.glass-fab,
+.glassBtn-fab {
+  border-radius: 9999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.glass-fab::before,
+.glassBtn-fab::before {
   box-shadow:
-    0 0 10px rgba(245, 158, 11, 0.12),
-    inset 0 1px 0 rgba(245, 158, 11, 0.2);
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 0.9),
+    inset 0 0 4px 1.5px rgba(34, 211, 238, 0.8),
+    0 0 20px rgba(34, 211, 238, 0.25);
+  background-color: rgba(14, 165, 233, 0.15);
+}
+.glass-fab:hover::before,
+.glassBtn-fab:hover::before {
+  background-color: rgba(34, 211, 238, 0.25);
+  box-shadow:
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 1),
+    inset 0 0 6px 2px rgba(34, 211, 238, 1),
+    0 0 30px rgba(34, 211, 238, 0.4);
+}
+.glass-fab-red::before,
+.glassBtn-fab-red::before {
+  box-shadow:
+    inset 2px 2px 0px -2px rgba(255, 255, 255, 0.9),
+    inset 0 0 4px 1.5px rgba(239, 68, 68, 0.8),
+    0 0 20px rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+/* --- D-Pad Motion Controls --- */
+.glass-dpad,
+.glassBtn-dpad {
+  border-radius: 12px;
+}
+.glass-dpad::before,
+.glassBtn-dpad::before {
+  background-color: rgba(34, 211, 238, 0.08);
+  box-shadow: inset 1.5px 1.5px 0px -1px rgba(255, 255, 255, 0.6), inset 0 0 2px 1px rgba(34, 211, 238, 0.5);
+}
+.glass-dpad:active::before,
+.glassBtn-dpad:active::before {
+  background-color: rgba(34, 211, 238, 0.45);
+  box-shadow: inset 2px 2px 0px -1px rgba(255, 255, 255, 0.9), 0 0 14px rgba(34, 211, 238, 0.5);
+}
+
+.glass-dpad-amber::before,
+.glassBtn-dpad-amber::before {
+  background-color: rgba(245, 158, 11, 0.08);
+  box-shadow: inset 1.5px 1.5px 0px -1px rgba(255, 255, 255, 0.6), inset 0 0 2px 1px rgba(245, 158, 11, 0.5);
+}
+.glass-dpad-amber:active::before,
+.glassBtn-dpad-amber:active::before {
+  background-color: rgba(245, 158, 11, 0.45);
+}
+
+/* --- Worker Scene Label Pills --- */
+.glass-pill,
+.glassBtn-pill {
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.glass-pill-alert::before,
+.glassBtn-pill-alert::before {
+  background-color: rgba(239, 68, 68, 0.2);
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.8), inset 0 0 5px 1px rgba(239, 68, 68, 0.7);
+}
+
+/* --- Scenario Options in Menu --- */
+.glass-option,
+.glassBtn-option {
+  border-radius: 14px;
+}
+.glass-option::before,
+.glassBtn-option::before {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.glass-option-selected::before,
+.glassBtn-option-selected::before {
+  background-color: rgba(34, 211, 238, 0.16);
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.85), inset 0 0 4px 1px rgba(34, 211, 238, 0.6);
+}
+
+/* --- Chip Tags --- */
+.glass-chip,
+.glassBtn-chip {
+  border-radius: 6px;
+}
+.glass-chip::before,
+.glassBtn-chip::before {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Jump Buttons in Controller --- */
+.glass-jump,
+.glassBtn-jump {
+  border-radius: 8px;
+}
+.glass-jump::before,
+.glassBtn-jump::before {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.glass-jump-active::before,
+.glassBtn-jump-active::before {
+  background-color: rgba(34, 211, 238, 0.22);
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.85), inset 0 0 4px 1px rgba(34, 211, 238, 0.7);
+}
+.glass-jump-amber-active::before,
+.glassBtn-jump-amber-active::before {
+  background-color: rgba(245, 158, 11, 0.22);
+  box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.85), inset 0 0 4px 1px rgba(245, 158, 11, 0.7);
 }

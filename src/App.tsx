@@ -3076,10 +3076,10 @@ export default function App() {
                 transform: `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`
               }}
               onClick={() => handleFocusWorker(worker)}
-              className={`pointer-events-auto absolute top-0 left-0 cursor-pointer transition-all duration-200 px-3 py-1 rounded-full flex items-center gap-2 ${
+              className={`pointer-events-auto absolute top-0 left-0 cursor-pointer transition-all duration-200 px-3 py-1 rounded-full flex items-center gap-2 glassBtn ${
                 isAffected
-                  ? 'glass-pill-alert text-white scale-105'
-                  : 'glass-pill text-slate-100'
+                  ? 'glassBtn-pill-alert text-white scale-105'
+                  : 'glassBtn-pill text-slate-100'
               }`}
             >
               <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
@@ -3097,14 +3097,14 @@ export default function App() {
           {/* 1. PHONE TOP HUD: BRAND, 360° HEADING, GYRO TOGGLE, LAYER SWITCH */}
           <div className="pointer-events-none fixed top-3 inset-x-3 z-30 flex items-center justify-between gap-1.5">
             {/* Brand & Heading Pill */}
-            <div className="pointer-events-auto glass-panel rounded-xl px-2.5 py-1.5 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg glass-cyan flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="pointer-events-auto glassContainer rounded-xl px-2.5 py-1.5 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg glassBtn glassBtn-cyan flex items-center justify-center text-cyan-400 shrink-0">
                 <Shield className="w-3.5 h-3.5" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 leading-none">
                   <span className="text-xs font-black text-white">LifeLink</span>
-                  <span className="text-[9px] font-mono px-1 py-0.2 rounded glass-chip text-cyan-300 font-bold">
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded glassBtn-chip text-cyan-300 font-bold">
                     360°
                   </span>
                 </div>
@@ -3127,10 +3127,10 @@ export default function App() {
               <button
                 onClick={requestGyroPermission}
                 title="Toggle 360° Gyroscope Sensor"
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all glassBtn ${
                   gyroEnabled
-                    ? 'glass-btn glass-active-cyan text-cyan-300 animate-pulse'
-                    : 'glass-btn text-slate-300'
+                    ? 'glassBtn-active-cyan text-cyan-300 animate-pulse'
+                    : 'text-slate-300'
                 }`}
               >
                 <Smartphone className={`w-3.5 h-3.5 ${gyroEnabled ? 'text-cyan-400' : 'text-slate-400'}`} />
@@ -3145,10 +3145,10 @@ export default function App() {
                   audioRef.current?.playLayerSwitch(nextLayer);
                   setLayer(nextLayer);
                 }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all glassBtn ${
                   layer === 1
-                    ? 'glass-btn glass-amber text-amber-300'
-                    : 'glass-btn glass-cyan text-cyan-300'
+                    ? 'glassBtn-amber text-amber-300'
+                    : 'glassBtn-cyan text-cyan-300'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -3159,7 +3159,7 @@ export default function App() {
               <button
                 onClick={() => setForceMobileMode(false)}
                 title="Switch to Desktop Layout"
-                className="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-mono glass-btn text-slate-300 transition-colors"
+                className="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-mono glassBtn text-slate-300 transition-colors"
               >
                 <span>💻 Desktop</span>
               </button>
@@ -3169,14 +3169,14 @@ export default function App() {
           {/* Active Emergency Alert Pill on Phone View */}
           {activeScenario && (
             <div className="pointer-events-none fixed top-14 inset-x-3 z-30 flex justify-center">
-              <div className="pointer-events-auto glass-panel glass-red rounded-xl px-3 py-1.5 flex items-center gap-2 max-w-sm animate-pulse">
+              <div className="pointer-events-auto glassContainer glass-red rounded-xl px-3 py-1.5 flex items-center gap-2 max-w-sm animate-pulse">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                 <div className="text-[11px] leading-tight text-white font-bold flex-1 truncate">
                   {activeScenario.sensorCode}: {activeScenario.category}
                 </div>
                 <button
                   onClick={handleResetSimulation}
-                  className="px-2 py-0.5 rounded glass-btn glass-red text-[10px] font-bold text-white shrink-0"
+                  className="px-2 py-0.5 rounded glassBtn glassBtn-red text-[10px] font-bold text-white shrink-0"
                 >
                   Reset
                 </button>
@@ -3187,7 +3187,7 @@ export default function App() {
           {/* Gyro Active Hint Banner */}
           {gyroEnabled && (
             <div className="pointer-events-none fixed top-24 inset-x-0 z-20 flex justify-center px-4">
-              <div className="glass-panel glass-cyan text-cyan-200 text-[10px] font-mono px-3 py-1 rounded-full animate-fade-in flex items-center gap-1.5">
+              <div className="glassContainer glass-cyan text-cyan-200 text-[10px] font-mono px-3 py-1 rounded-full animate-fade-in flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping inline-block" />
                 <span>360° Gyro Active: Rotate &amp; tilt phone • Drag to adjust heading</span>
               </div>
@@ -3200,13 +3200,13 @@ export default function App() {
               <button
                 onClick={() => setIsMobileEmergencyOpen(true)}
                 aria-label="Simulate Emergency"
-                className="glass-fab glass-fab-red flex items-center justify-center w-12 h-12 rounded-full text-red-400 transition-all"
+                className="glassBtn glassBtn-fab glassBtn-fab-red flex items-center justify-center w-12 h-12 rounded-full text-red-400 transition-all"
               >
                 <AlertTriangle className="w-6 h-6 animate-pulse" />
               </button>
             </div>
           ) : (
-            <div className="fixed bottom-4 left-4 z-40 w-64 glass-panel glass-red rounded-2xl p-3 text-white select-none animate-in fade-in zoom-in-95 duration-150">
+            <div className="fixed bottom-4 left-4 z-40 w-64 glassContainer glass-red rounded-2xl p-3 text-white select-none animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-300">
                   <Zap className="w-3.5 h-3.5 text-amber-400" />
@@ -3214,7 +3214,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsMobileEmergencyOpen(false)}
-                  className="p-1 rounded-md glass-btn text-slate-300 hover:text-white"
+                  className="p-1 rounded-md glassBtn text-slate-300 hover:text-white"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -3233,10 +3233,10 @@ export default function App() {
                       handleTriggerScenario(scen.key);
                       setIsMobileEmergencyOpen(false);
                     }}
-                    className={`flex items-center justify-between p-2 rounded-xl text-left transition-all ${
+                    className={`flex items-center justify-between p-2 rounded-xl text-left transition-all glassBtn ${
                       activeScenarioKey === scen.key
-                        ? 'glass-option-selected glass-active-red text-white font-bold'
-                        : 'glass-option text-slate-200'
+                        ? 'glassBtn-option-selected glassBtn-active-red text-white font-bold'
+                        : 'glassBtn-option text-slate-200'
                     }`}
                   >
                     <div className="text-[11px] leading-tight font-medium">
@@ -3252,7 +3252,7 @@ export default function App() {
                       handleResetSimulation();
                       setIsMobileEmergencyOpen(false);
                     }}
-                    className="mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl glass-btn glass-red text-red-200 text-xs font-bold"
+                    className="mt-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl glassBtn glassBtn-red text-red-200 text-xs font-bold"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Reset Simulation</span>
@@ -3269,8 +3269,8 @@ export default function App() {
         <>
           {/* 1. TOP-LEFT: LIFELINK 3D BRAND PILL CARD */}
           <div className="pointer-events-none absolute top-4 left-4 z-20 flex flex-col gap-2">
-            <div className="pointer-events-auto glass-panel rounded-2xl px-4 py-2.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl glass-cyan flex items-center justify-center text-cyan-300 shrink-0">
+            <div className="pointer-events-auto glassContainer rounded-2xl px-4 py-2.5 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl glassBtn glassBtn-cyan flex items-center justify-center text-cyan-300 shrink-0">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -3299,7 +3299,7 @@ export default function App() {
             <div className="pointer-events-auto self-start">
               <button
                 onClick={() => setForceMobileMode(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-btn glass-cyan text-cyan-300 text-[11px] font-bold transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glassBtn glassBtn-cyan text-cyan-300 text-[11px] font-bold transition-all"
               >
                 <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Test Phone 360 / Gyro</span>
@@ -3309,17 +3309,17 @@ export default function App() {
 
           {/* 2. TOP-CENTER: LAYER 1 / LAYER 2 PILL SWITCH */}
           <div className="pointer-events-none absolute top-4 inset-x-0 z-20 flex justify-center px-4">
-            <div className="pointer-events-auto glass-panel p-1 rounded-full flex items-center gap-1">
+            <div className="pointer-events-auto glassContainer p-1 rounded-full flex items-center gap-1">
               <button
                 onClick={() => {
                   ensureAudioReady();
                   audioRef.current?.playLayerSwitch(1);
                   setLayer(1);
                 }}
-                className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
+                className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 glassBtn ${
                   layer === 1
-                    ? 'glass-active-amber text-amber-100 shadow-md'
-                    : 'glass-btn text-slate-300 hover:text-white'
+                    ? 'glassBtn-active-amber text-amber-100 shadow-md'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <Layers className="w-4 h-4" />
@@ -3332,10 +3332,10 @@ export default function App() {
                   audioRef.current?.playLayerSwitch(2);
                   setLayer(2);
                 }}
-                className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 ${
+                className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 glassBtn ${
                   layer === 2
-                    ? 'glass-active-cyan text-cyan-100 shadow-md'
-                    : 'glass-btn text-slate-300 hover:text-white'
+                    ? 'glassBtn-active-cyan text-cyan-100 shadow-md'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <Radio className="w-4 h-4" />
@@ -3349,10 +3349,10 @@ export default function App() {
             <button
               onClick={handleToggleAudio}
               title={isAudioMuted ? 'Unmute 3D Spatial Audio' : 'Mute 3D Spatial Audio'}
-              className={`pointer-events-auto px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-all ${
+              className={`pointer-events-auto px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-all glassBtn ${
                 !isAudioMuted && isAudioUnlocked
-                  ? 'glass-btn glass-cyan text-cyan-300'
-                  : 'glass-btn text-slate-300'
+                  ? 'glassBtn-cyan text-cyan-300'
+                  : 'text-slate-300'
               }`}
             >
               {!isAudioMuted ? (
@@ -3387,7 +3387,7 @@ export default function App() {
 
             <button
               onClick={() => handleSelectCameraPreset('overview')}
-              className="pointer-events-auto glass-btn text-slate-100 px-4 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors"
+              className="pointer-events-auto glassBtn text-slate-100 px-4 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
               <span>Reset Camera</span>
@@ -3396,7 +3396,7 @@ export default function App() {
 
           {/* 4. BOTTOM-LEFT: LEGEND CARD */}
           <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-col gap-2">
-            <div className="pointer-events-auto glass-panel rounded-2xl px-4 py-3.5 w-52">
+            <div className="pointer-events-auto glassContainer rounded-2xl px-4 py-3.5 w-52">
               <div className="text-xs font-bold text-white mb-2.5">Legend</div>
               <div className="flex flex-col gap-2 text-xs text-slate-200">
                 <div className="flex items-center gap-2.5">
@@ -3423,10 +3423,10 @@ export default function App() {
 
               <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] text-slate-400 flex items-center justify-between">
                 <span
-                  className={`px-1.5 py-0.5 rounded font-mono font-bold ${
+                  className={`px-1.5 py-0.5 rounded font-mono font-bold glassBtn-chip ${
                     isFlyingKeyActive
-                      ? 'glass-chip glass-active-cyan text-cyan-200'
-                      : 'glass-chip text-amber-300'
+                      ? 'glassBtn-active-cyan text-cyan-200'
+                      : 'text-amber-300'
                   }`}
                 >
                   WASD + Mouse
@@ -3438,7 +3438,7 @@ export default function App() {
 
           {/* 5. RIGHT-SIDE: VERTICAL "SIMULATE EMERGENCY" CARD */}
           <div className="pointer-events-none absolute bottom-6 right-5 z-20 w-72 sm:w-80">
-            <div className="pointer-events-auto glass-panel rounded-2xl p-4">
+            <div className="pointer-events-auto glassContainer rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -3447,7 +3447,7 @@ export default function App() {
                 {activeScenario && (
                   <button
                     onClick={handleResetSimulation}
-                    className="text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 flex items-center gap-1 glass-btn glass-cyan px-2 py-0.5 rounded-full"
+                    className="text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 flex items-center gap-1 glassBtn glassBtn-cyan px-2 py-0.5 rounded-full"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>Clear</span>
@@ -3492,10 +3492,10 @@ export default function App() {
                     <button
                       key={item.key}
                       onClick={() => handleTriggerScenario(item.key)}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all duration-150 text-left ${
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all duration-150 text-left glassBtn ${
                         isSelected
-                          ? 'glass-option-selected'
-                          : 'glass-option'
+                          ? 'glassBtn-option-selected'
+                          : 'glassBtn-option'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -3517,8 +3517,8 @@ export default function App() {
                       <div
                         className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors ${
                           isSelected
-                            ? 'glass-active-cyan text-cyan-100 border-cyan-300'
-                            : 'glass-btn text-cyan-400 border-cyan-500/30'
+                            ? 'glassBtn-active-cyan text-cyan-100 border-cyan-300'
+                            : 'glassBtn text-cyan-400 border-cyan-500/30'
                         }`}
                       >
                         <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
@@ -3546,7 +3546,7 @@ export default function App() {
           <button
             onClick={() => setIsControllerOpen(true)}
             aria-label="Open Navigation Controller"
-            className="glass-fab group relative flex items-center justify-center w-14 h-14 rounded-full text-cyan-300 transition-all duration-300"
+            className="glassBtn glassBtn-fab group relative flex items-center justify-center w-14 h-14 rounded-full text-cyan-300 transition-all duration-300"
           >
             <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
@@ -3559,7 +3559,7 @@ export default function App() {
       ) : (
         /* POPPED-UP NAVIGATION CONTROLLER */
         <div
-          className={`fixed z-40 w-[290px] sm:w-[315px] glass-panel glass-cyan rounded-2xl p-3.5 text-white select-none animate-in fade-in zoom-in-95 duration-150 ${
+          className={`fixed z-40 w-[290px] sm:w-[315px] glassContainer glass-cyan rounded-2xl p-3.5 text-white select-none animate-in fade-in zoom-in-95 duration-150 ${
             effectiveIsMobile
               ? 'bottom-4 right-4'
               : 'bottom-6 right-[300px] sm:right-[340px]'
@@ -3568,7 +3568,7 @@ export default function App() {
           {/* Header */}
           <div className="flex items-center justify-between pb-2.5 border-b border-white/10 mb-2.5">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg glass-cyan flex items-center justify-center text-cyan-400">
+              <div className="w-7 h-7 rounded-lg glassBtn glassBtn-cyan flex items-center justify-center text-cyan-400">
                 <Gamepad2 className="w-4 h-4" />
               </div>
               <div>
@@ -3588,10 +3588,10 @@ export default function App() {
                   setIsBoostActive(nextBoost);
                   virtualNavRef.current.boost = nextBoost;
                 }}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors glassBtn ${
                   isBoostActive
-                    ? 'glass-active-amber text-amber-100 shadow-md'
-                    : 'glass-btn text-slate-300 hover:text-white'
+                    ? 'glassBtn-active-amber text-amber-100 shadow-md'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <Zap className="w-3 h-3" />
@@ -3603,7 +3603,7 @@ export default function App() {
                   handleStopAllNav();
                   setIsControllerOpen(false);
                 }}
-                className="w-7 h-7 rounded-lg glass-btn text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                className="w-7 h-7 rounded-lg glassBtn text-slate-300 hover:text-white flex items-center justify-center transition-colors"
                 aria-label="Close Controller"
               >
                 <X className="w-4 h-4" />
@@ -3614,14 +3614,14 @@ export default function App() {
           {/* D-Pad & Elevation Controls */}
           <div className="flex items-center justify-between gap-2.5 mb-2.5">
             {/* Tactical D-Pad */}
-            <div className="relative w-36 h-36 glass-panel rounded-2xl p-1 flex items-center justify-center">
+            <div className="relative w-36 h-36 glassContainer rounded-2xl p-1 flex items-center justify-center">
               {/* Forward */}
               <button
                 onPointerDown={() => handleVirtualNavDown('forward')}
                 onPointerUp={() => handleVirtualNavUp('forward')}
                 onPointerLeave={() => handleVirtualNavUp('forward')}
                 onPointerCancel={() => handleVirtualNavUp('forward')}
-                className="absolute top-1.5 w-11 h-10 rounded-xl glass-dpad flex items-center justify-center text-cyan-300 transition-all"
+                className="absolute top-1.5 w-11 h-10 rounded-xl glassBtn glassBtn-dpad flex items-center justify-center text-cyan-300 transition-all"
                 title="Forward"
               >
                 <ArrowUp className="w-5 h-5" />
@@ -3633,7 +3633,7 @@ export default function App() {
                 onPointerUp={() => handleVirtualNavUp('backward')}
                 onPointerLeave={() => handleVirtualNavUp('backward')}
                 onPointerCancel={() => handleVirtualNavUp('backward')}
-                className="absolute bottom-1.5 w-11 h-10 rounded-xl glass-dpad flex items-center justify-center text-cyan-300 transition-all"
+                className="absolute bottom-1.5 w-11 h-10 rounded-xl glassBtn glassBtn-dpad flex items-center justify-center text-cyan-300 transition-all"
                 title="Backward"
               >
                 <ArrowDown className="w-5 h-5" />
@@ -3645,7 +3645,7 @@ export default function App() {
                 onPointerUp={() => handleVirtualNavUp('left')}
                 onPointerLeave={() => handleVirtualNavUp('left')}
                 onPointerCancel={() => handleVirtualNavUp('left')}
-                className="absolute left-1.5 w-10 h-11 rounded-xl glass-dpad flex items-center justify-center text-cyan-300 transition-all"
+                className="absolute left-1.5 w-10 h-11 rounded-xl glassBtn glassBtn-dpad flex items-center justify-center text-cyan-300 transition-all"
                 title="Strafe Left"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -3657,7 +3657,7 @@ export default function App() {
                 onPointerUp={() => handleVirtualNavUp('right')}
                 onPointerLeave={() => handleVirtualNavUp('right')}
                 onPointerCancel={() => handleVirtualNavUp('right')}
-                className="absolute right-1.5 w-10 h-11 rounded-xl glass-dpad flex items-center justify-center text-cyan-300 transition-all"
+                className="absolute right-1.5 w-10 h-11 rounded-xl glassBtn glassBtn-dpad flex items-center justify-center text-cyan-300 transition-all"
                 title="Strafe Right"
               >
                 <ArrowRight className="w-5 h-5" />
@@ -3667,7 +3667,7 @@ export default function App() {
               <button
                 onClick={handleTurn180}
                 title="Turn 180°"
-                className="w-10 h-10 rounded-full glass-btn flex items-center justify-center text-slate-300 text-[10px] font-bold"
+                className="w-10 h-10 rounded-full glassBtn flex items-center justify-center text-slate-300 text-[10px] font-bold"
               >
                 <RotateCw className="w-4 h-4" />
               </button>
@@ -3680,7 +3680,7 @@ export default function App() {
                 onPointerUp={() => handleVirtualNavUp('up')}
                 onPointerLeave={() => handleVirtualNavUp('up')}
                 onPointerCancel={() => handleVirtualNavUp('up')}
-                className="w-full py-2.5 rounded-xl glass-dpad-amber flex items-center justify-center gap-1 text-amber-300 text-xs font-bold transition-all"
+                className="w-full py-2.5 rounded-xl glassBtn glassBtn-dpad-amber flex items-center justify-center gap-1 text-amber-300 text-xs font-bold transition-all"
               >
                 <ArrowUp className="w-3.5 h-3.5" />
                 <span>Ascend</span>
@@ -3691,7 +3691,7 @@ export default function App() {
                 onPointerUp={() => handleVirtualNavUp('down')}
                 onPointerLeave={() => handleVirtualNavUp('down')}
                 onPointerCancel={() => handleVirtualNavUp('down')}
-                className="w-full py-2.5 rounded-xl glass-dpad-amber flex items-center justify-center gap-1 text-amber-300 text-xs font-bold transition-all"
+                className="w-full py-2.5 rounded-xl glassBtn glassBtn-dpad-amber flex items-center justify-center gap-1 text-amber-300 text-xs font-bold transition-all"
               >
                 <ArrowDown className="w-3.5 h-3.5" />
                 <span>Descend</span>
@@ -3699,7 +3699,7 @@ export default function App() {
 
               <button
                 onClick={handleRecenter}
-                className="w-full py-2 rounded-xl glass-btn text-slate-200 text-[11px] font-medium flex items-center justify-center gap-1 transition-all"
+                className="w-full py-2 rounded-xl glassBtn text-slate-200 text-[11px] font-medium flex items-center justify-center gap-1 transition-all"
               >
                 <Compass className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Recenter</span>
@@ -3712,50 +3712,50 @@ export default function App() {
             <span className="text-slate-400 font-mono text-[9px] uppercase">Jump:</span>
             <button
               onClick={() => handleSelectCameraPreset('overview')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+              className={`px-2 py-1 rounded-md font-semibold transition-colors glassBtn ${
                 activePresetName === 'overview'
-                  ? 'glass-jump-active text-cyan-200'
-                  : 'glass-jump text-slate-200'
+                  ? 'glassBtn-jump-active text-cyan-200'
+                  : 'glassBtn-jump text-slate-200'
               }`}
             >
               Main
             </button>
             <button
               onClick={() => handleSelectCameraPreset('surface')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+              className={`px-2 py-1 rounded-md font-semibold transition-colors glassBtn ${
                 activePresetName === 'surface'
-                  ? 'glass-jump-active text-cyan-200'
-                  : 'glass-jump text-slate-200'
+                  ? 'glassBtn-jump-active text-cyan-200'
+                  : 'glassBtn-jump text-slate-200'
               }`}
             >
               Surface
             </button>
             <button
               onClick={() => moveCameraTo([-1.8, 3.2, 13.5], [-1.8, 2.5, 0.4], 'l1')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+              className={`px-2 py-1 rounded-md font-semibold transition-colors glassBtn ${
                 activePresetName === 'l1'
-                  ? 'glass-jump-amber-active text-amber-200'
-                  : 'glass-jump text-amber-400'
+                  ? 'glassBtn-jump-amber-active text-amber-200'
+                  : 'glassBtn-jump text-amber-400'
               }`}
             >
               L1
             </button>
             <button
               onClick={() => moveCameraTo([0.5, -1.8, 13.5], [0.5, -2.4, 0.4], 'l2')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+              className={`px-2 py-1 rounded-md font-semibold transition-colors glassBtn ${
                 activePresetName === 'l2'
-                  ? 'glass-jump-amber-active text-amber-200'
-                  : 'glass-jump text-amber-400'
+                  ? 'glassBtn-jump-amber-active text-amber-200'
+                  : 'glassBtn-jump text-amber-400'
               }`}
             >
               L2
             </button>
             <button
               onClick={() => moveCameraTo([0.5, -6.8, 13.5], [0.5, -7.2, 0.4], 'l3')}
-              className={`px-2 py-1 rounded-md font-semibold transition-colors ${
+              className={`px-2 py-1 rounded-md font-semibold transition-colors glassBtn ${
                 activePresetName === 'l3'
-                  ? 'glass-jump-amber-active text-amber-200'
-                  : 'glass-jump text-amber-400'
+                  ? 'glassBtn-jump-amber-active text-amber-200'
+                  : 'glassBtn-jump text-amber-400'
               }`}
             >
               L3
